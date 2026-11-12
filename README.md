@@ -233,11 +233,6 @@ Confirm that the backend terminal is still running and that
 - Add evaluation questions and answer scoring
 - Add support for scanned PDFs with local OCR
 
-## 📄 License
-
-Add your preferred license before publishing this repository.
-
----
 
 <div align="center">
 
