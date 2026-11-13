@@ -37,7 +37,7 @@ FastAPI backend, a clean Streamlit interface, and Ollama-powered intelligence.
 | 🗂️ Document collections | Group uploads by collection |
 | 🧹 Document management | Re-index or delete indexed documents |
 | 🧠 Semantic retrieval | Finds meaning, not only exact keywords |
-| 🎯 Reranking | Brings the most relevant passages to the model |
+| 🔀 Hybrid retrieval | Combines semantic similarity with lexical matching |
 | 💬 Conversation memory | Ask natural follow-up questions |
 | 🔎 Grounded answers | Responses are based on retrieved document context |
 | 📌 Citations | See which document and page supported the answer |
@@ -53,7 +53,7 @@ FastAPI backend, a clean Streamlit interface, and Ollama-powered intelligence.
   Split into smart chunks ──► Create local embeddings
                                       │
                                       ▼
-                              Semantic retrieval
+                         Hybrid retrieval
                                       │
                                       ▼
                          Ollama generates an answer
@@ -163,6 +163,7 @@ RAG Document Chatbot/
 │   ├── main.py         # FastAPI endpoints
 │   └── rag.py          # Loading, indexing, retrieval, and answers
 ├── streamlit_app.py    # Web interface and drag-and-drop collections
+├── evaluation/         # Ground-truth questions and RAG metrics
 ├── requirements.txt    # Python dependencies
 ├── .env.example        # Safe configuration template
 └── README.md
@@ -230,12 +231,25 @@ API_URL=http://localhost:8001
 Confirm that the backend terminal is still running and that
 <http://127.0.0.1:8000/health> returns `{"status":"ok"}`.
 
+## 📊 Evaluate retrieval quality
+
+The repository includes a lightweight evaluation harness in `evaluation/`.
+Replace the sample rows in `evaluation/questions.json` with questions,
+expected source filenames, and expected answer terms from your documents.
+
+Run:
+
+```powershell
+python evaluation\run_evaluation.py
+```
+
+The report includes source recall@5, answer-term coverage, retrieved sources,
+and the generated answer for each question. Use it as a regression check after
+changing chunking, embeddings, retrieval weights, or the local model.
+
 ## 🗺️ Possible next steps
 
-- Add drag-and-drop document collections
-- Add document deletion and re-index controls
 - Add chat export
-- Add evaluation questions and answer scoring
 - Add support for scanned PDFs with local OCR
 
 

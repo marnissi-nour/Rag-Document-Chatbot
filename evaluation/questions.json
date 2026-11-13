@@ -1,0 +1,20 @@
+[
+  {
+    "id": "replace-me-1",
+    "question": "Replace this with a question whose answer is in your document.",
+    "expected_sources": ["your-document.pdf"],
+    "expected_terms": ["replace", "these", "terms"]
+  },
+  {
+    "id": "replace-me-2",
+    "question": "Replace this with a second question testing another section.",
+    "expected_sources": ["your-document.pdf"],
+    "expected_terms": ["expected", "answer"]
+  },
+  {
+    "id": "replace-me-3",
+    "question": "Replace this with a question that should be answerable from context.",
+    "expected_sources": ["your-document.pdf"],
+    "expected_terms": ["important", "fact"]
+  }
+]
