@@ -29,8 +29,12 @@ if "messages" not in st.session_state:
 if "indexed_sources" not in st.session_state:
     st.session_state.indexed_sources = []
 
+st.sidebar.header("Document collections")
+collection = st.sidebar.text_input("Collection name", value="default").strip() or "default"
+refresh_documents = st.sidebar.button("Refresh documents")
+
 uploaded_files = st.file_uploader(
-    "Upload documents",
+    "Drag and drop documents here",
     type=["pdf", "docx", "txt", "md"],
     accept_multiple_files=True,
 )
@@ -39,6 +43,7 @@ if st.button("Index documents", disabled=not uploaded_files):
     for uploaded_file in uploaded_files:
         response = post_json(
             "/documents",
+            data={"collection": collection},
             files={
                 "file": (
                     uploaded_file.name,
@@ -55,6 +60,43 @@ if st.button("Index documents", disabled=not uploaded_files):
             st.success(f"{data['filename']} indexed ({data['chunks']} chunks).")
         elif response is not None:
             st.error(response.text)
+
+try:
+    documents_response = requests.get(f"{API_URL}/documents", timeout=30)
+except requests.ConnectionError:
+    documents_response = None
+    st.sidebar.error("Backend is not running.")
+except requests.Timeout:
+    documents_response = None
+    st.sidebar.error("Backend took too long to respond.")
+if documents_response is not None and documents_response.ok:
+    documents = documents_response.json()
+    if documents:
+        st.sidebar.subheader("Indexed documents")
+        for document in documents:
+            label = f"{document['filename']} · {document['collection']}"
+            st.sidebar.caption(f"{label} ({document['chunks']} chunks)")
+            action_col1, action_col2 = st.sidebar.columns(2)
+            if action_col1.button("Re-index", key=f"reindex-{document['document_id']}"):
+                response = post_json(
+                    f"/documents/{document['document_id']}/reindex",
+                    timeout=180,
+                )
+                if response is not None and response.ok:
+                    st.sidebar.success("Re-indexed.")
+                    st.rerun()
+                elif response is not None:
+                    st.sidebar.error(response.text)
+            if action_col2.button("Delete", key=f"delete-{document['document_id']}"):
+                response = requests.delete(
+                    f"{API_URL}/documents/{document['document_id']}",
+                    timeout=30,
+                )
+                if response.ok:
+                    st.sidebar.success("Deleted.")
+                    st.rerun()
+                else:
+                    st.sidebar.error(response.text)
 
 if st.session_state.get("indexed_sources"):
     source = st.selectbox("Summarize an indexed document", st.session_state.indexed_sources)

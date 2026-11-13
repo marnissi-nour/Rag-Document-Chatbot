@@ -8,6 +8,7 @@ load_dotenv()
 
 class Settings(BaseSettings):
     index_path: str = "./local_index.json"
+    uploads_path: str = "./uploads"
     chunk_size: int = 1000
     chunk_overlap: int = 150
     ollama_base_url: str = "http://localhost:11434"

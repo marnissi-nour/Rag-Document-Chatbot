@@ -23,6 +23,7 @@ class RAGService:
         settings = get_settings()
         self.settings = settings
         self.index_path = Path(settings.index_path)
+        self.uploads_path = Path(settings.uploads_path)
         self.chunks: list[dict[str, Any]] = []
         self.embeddings = OllamaEmbeddings(
             model=settings.ollama_embedding_model,
@@ -39,7 +40,12 @@ class RAGService:
         if self.index_path.exists():
             stored_chunks = json.loads(self.index_path.read_text(encoding="utf-8"))
             self.chunks = [
-                chunk for chunk in stored_chunks if "embedding" in chunk
+                {
+                    **chunk,
+                    "collection": chunk.get("collection", "default"),
+                }
+                for chunk in stored_chunks
+                if "embedding" in chunk
             ]
 
     def _save_index(self) -> None:
@@ -63,12 +69,25 @@ class RAGService:
             return [Document(page_content=path.read_text(encoding="utf-8"))]
         raise ValueError(f"Unsupported file type: {path.suffix}")
 
-    def ingest(self, path: Path, source_name: str | None = None) -> dict[str, Any]:
+    def ingest(
+        self,
+        path: Path,
+        source_name: str | None = None,
+        collection: str = "default",
+        document_id: str | None = None,
+        persist_file: bool = True,
+    ) -> dict[str, Any]:
         if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
             raise ValueError("Supported file types are PDF, DOCX, TXT, and Markdown.")
 
-        document_id = str(uuid4())
+        document_id = document_id or str(uuid4())
         display_name = source_name or path.name
+        if not collection.strip():
+            raise ValueError("Collection name cannot be empty.")
+        stored_path = self.uploads_path / f"{document_id}{path.suffix.lower()}"
+        if persist_file:
+            self.uploads_path.mkdir(parents=True, exist_ok=True)
+            stored_path.write_bytes(path.read_bytes())
         documents = self._load_document(path)
         for document in documents:
             document.metadata.update(
@@ -88,6 +107,7 @@ class RAGService:
                 "source": display_name,
                 "page": chunk.metadata.get("page"),
                 "document_id": document_id,
+                "collection": collection.strip(),
                 "embedding": vector,
             }
             for chunk, vector in zip(chunks, vectors)
@@ -96,8 +116,59 @@ class RAGService:
         return {
             "document_id": document_id,
             "filename": display_name,
+            "collection": collection.strip(),
             "chunks": len(chunks),
         }
+
+    def list_documents(self) -> list[dict[str, Any]]:
+        documents: dict[str, dict[str, Any]] = {}
+        for chunk in self.chunks:
+            document_id = chunk["document_id"]
+            document = documents.setdefault(
+                document_id,
+                {
+                    "document_id": document_id,
+                    "filename": chunk["source"],
+                    "collection": chunk.get("collection", "default"),
+                    "chunks": 0,
+                },
+            )
+            document["chunks"] += 1
+        return sorted(documents.values(), key=lambda item: item["filename"].lower())
+
+    def delete_document(self, document_id: str) -> dict[str, str]:
+        existing = any(chunk["document_id"] == document_id for chunk in self.chunks)
+        if not existing:
+            raise ValueError("Document not found.")
+        self.chunks = [
+            chunk for chunk in self.chunks if chunk["document_id"] != document_id
+        ]
+        self._save_index()
+        for stored_path in self.uploads_path.glob(f"{document_id}.*"):
+            stored_path.unlink(missing_ok=True)
+        return {"document_id": document_id, "status": "deleted"}
+
+    def reindex_document(self, document_id: str) -> dict[str, Any]:
+        document = next(
+            (item for item in self.list_documents() if item["document_id"] == document_id),
+            None,
+        )
+        if document is None:
+            raise ValueError("Document not found.")
+        stored_paths = list(self.uploads_path.glob(f"{document_id}.*"))
+        if not stored_paths:
+            raise ValueError("Original file is unavailable for re-indexing.")
+        self.chunks = [
+            chunk for chunk in self.chunks if chunk["document_id"] != document_id
+        ]
+        self._save_index()
+        return self.ingest(
+            stored_paths[0],
+            document["filename"],
+            document["collection"],
+            document_id=document_id,
+            persist_file=False,
+        )
 
     def _search(self, question: str, top_k: int) -> list[tuple[dict[str, Any], float]]:
         if not self.chunks:

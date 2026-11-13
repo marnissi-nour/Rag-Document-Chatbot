@@ -34,6 +34,8 @@ FastAPI backend, a clean Streamlit interface, and Ollama-powered intelligence.
 | Capability | What you get |
 |---|---|
 | 📚 Multi-format uploads | PDF, DOCX, TXT, and Markdown |
+| 🗂️ Document collections | Group uploads by collection |
+| 🧹 Document management | Re-index or delete indexed documents |
 | 🧠 Semantic retrieval | Finds meaning, not only exact keywords |
 | 🎯 Reranking | Brings the most relevant passages to the model |
 | 💬 Conversation memory | Ask natural follow-up questions |
@@ -133,11 +135,13 @@ Open <http://127.0.0.1:8501> in your browser.
 ## 🎯 Your first conversation
 
 1. Upload one or more files.
-2. Click **Index documents**.
-3. Ask a question in the chat box.
-4. Read the answer and expand **Sources** to inspect citations.
-5. Select a document and click **Create summary**.
-6. Ask a follow-up question using the same conversation.
+2. Choose a collection name in the sidebar.
+3. Click **Index documents**.
+4. Ask a question in the chat box.
+5. Read the answer and expand **Sources** to inspect citations.
+6. Use the sidebar to **Re-index** or **Delete** a document.
+7. Select a document and click **Create summary**.
+8. Ask a follow-up question using the same conversation.
 
 For the best results, upload clear, text-based documents and ask focused
 questions such as:
@@ -158,7 +162,7 @@ RAG Document Chatbot/
 │   ├── config.py       # Local application settings
 │   ├── main.py         # FastAPI endpoints
 │   └── rag.py          # Loading, indexing, retrieval, and answers
-├── streamlit_app.py    # Web interface
+├── streamlit_app.py    # Web interface and drag-and-drop collections
 ├── requirements.txt    # Python dependencies
 ├── .env.example        # Safe configuration template
 └── README.md
@@ -172,6 +176,7 @@ This project is local-first:
 - Ollama models run locally.
 - No cloud API key is required.
 - `local_index.json` stores the indexed text and embeddings.
+- `uploads/` stores local copies so documents can be re-indexed later.
 - `.env`, `local_index.json`, and virtual environments are ignored by Git.
 
 To delete the local index and start fresh:
